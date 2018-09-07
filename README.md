@@ -11,11 +11,14 @@ You do the math.
 
 ## Usage
 
-_TO DO_
+```sh
+spinarago --hostname <host> --delay <milliseconds> --level <max-depth>
+```
 
 ## TODO
 
 - Handle relative paths
 - Handle paths without ports
-- Refactor local handlers (for tests)
-- Implement the CLI
+- Print results as they came through
+- Improve error handling
+- Improve output

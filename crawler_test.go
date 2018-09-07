@@ -185,7 +185,7 @@ func TestCrawl(t *testing.T) {
 
 	go http.ListenAndServe(":8080", nil)
 
-	result, err := Crawl(input, 1000)
+	result, err := Crawl(input, 10, 1000)
 	if err != nil {
 		t.Fatalf("Test failed with error: %v", err)
 	}

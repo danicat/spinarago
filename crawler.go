@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,7 +15,20 @@ import (
 )
 
 func main() {
+	//var hostname string
+	//flag.String(&hostname, "hostname", "The hostname to crawl.")
+	hostname := flag.String("hostname", "", "the name of the host to crawl")
+	level := flag.Int("level", 10, "the max level of depth to crawl")
+	delay := flag.Int("delay", 1000, "delay between each request in milliseconds")
+	flag.Parse()
 
+	fmt.Printf("Parsing %v with %v milliseconds interval.\n", *hostname, *delay)
+	siteMap, err := Crawl(*hostname, *level, *delay)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(siteMap)
+	}
 }
 
 // ParseHTML takes a html body and returns a list of referred URLs
@@ -80,7 +95,7 @@ func GetBody(rawurl string) (string, error) {
 
 // Crawl takes a base URL and builds a site map from it.
 // delay is the time in miliseconds to wait between one request and another
-func Crawl(rawurl string, delay time.Duration) (map[string][]string, error) {
+func Crawl(rawurl string, level, delay int) (map[string][]string, error) {
 	pu, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, err
@@ -88,29 +103,38 @@ func Crawl(rawurl string, delay time.Duration) (map[string][]string, error) {
 
 	domain := pu.Hostname()
 
-	queue := []string{rawurl}
+	type Item struct {
+		URL   string
+		Level int
+	}
+	queue := []Item{Item{rawurl, 0}}
+
 	adjList := map[string][]string{}
 
 	for len(queue) > 0 {
 		u := queue[0]
 		queue = queue[1:]
 
-		if _, ok := adjList[u]; ok {
+		if _, ok := adjList[u.URL]; ok {
 			continue
 		}
 
-		body, err := GetBody(u)
+		body, err := GetBody(u.URL)
 		if err != nil {
-			return nil, err
+			// return nil, err
+			log.Printf("Error getting URL %v: %v\n", u.URL, err)
 		}
-		time.Sleep(delay * time.Millisecond)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 
 		urls := ParseHTML(body)
 		filtered := FilterByDomain(domain, urls)
 
-		adjList[u] = filtered
-		for _, f := range filtered {
-			queue = append(queue, f)
+		adjList[u.URL] = filtered
+
+		if u.Level < level {
+			for _, f := range filtered {
+				queue = append(queue, Item{URL: f, Level: u.Level + 1})
+			}
 		}
 	}
 
