@@ -61,7 +61,16 @@ var abc = `
 <html>
 <title>ABC</title>
 <body>
-<p><a href="http://localhost:8080/def.html">abc</a></p>
+<p><a href="http://localhost:8080/def.html">def</a></p>
+</body>
+</html>
+`
+
+var def = `
+<html>
+<title>DEF</title>
+<body>
+<p><a href="http://localhost:8080/abc.html">abc</a></p>
 </body>
 </html>
 `
@@ -151,34 +160,32 @@ func TestCrawl(t *testing.T) {
 			"http://localhost:8080/def.html",
 		},
 		"http://localhost:8080/def.html": {
+			"http://localhost:8080/abc.html",
 			// "http://localhost:8080/ghi.html",
 			// "http://localhost:8080/jkl.html",
 		},
 		// "http://localhost:8080/ghi.html": {
-		// 	"http://localhost:8080/abc.html",
 		// },
 	}
 
-	homeHandler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+	hndlFunc := func(path, body string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != path {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			io.WriteString(w, body)
 		}
-		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, home)
 	}
 
-	abcHandler := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, abc)
-	}
-
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/abc.html", abcHandler)
+	http.HandleFunc("/", hndlFunc("/", home))
+	http.HandleFunc("/abc.html", hndlFunc("/abc.html", abc))
+	http.HandleFunc("/def.html", hndlFunc("/def.html", def))
 
 	go http.ListenAndServe(":8080", nil)
 
-	result, err := Crawl(input)
+	result, err := Crawl(input, 1000)
 	if err != nil {
 		t.Fatalf("Test failed with error: %v", err)
 	}

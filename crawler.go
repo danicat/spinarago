@@ -78,7 +78,9 @@ func GetBody(rawurl string) (string, error) {
 	return string(body), nil
 }
 
-func Crawl(rawurl string) (map[string][]string, error) {
+// Crawl takes a base URL and builds a site map from it.
+// delay is the time in miliseconds to wait between one request and another
+func Crawl(rawurl string, delay time.Duration) (map[string][]string, error) {
 	pu, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, err
@@ -93,11 +95,15 @@ func Crawl(rawurl string) (map[string][]string, error) {
 		u := queue[0]
 		queue = queue[1:]
 
+		if _, ok := adjList[u]; ok {
+			continue
+		}
+
 		body, err := GetBody(u)
 		if err != nil {
 			return nil, err
 		}
-		time.Sleep(100)
+		time.Sleep(delay * time.Millisecond)
 
 		urls := ParseHTML(body)
 		filtered := FilterByDomain(domain, urls)
