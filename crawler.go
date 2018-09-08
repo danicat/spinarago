@@ -1,39 +1,41 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
 )
 
-func main() {
-	//var hostname string
-	//flag.String(&hostname, "hostname", "The hostname to crawl.")
-	hostname := flag.String("hostname", "", "the name of the host to crawl")
-	level := flag.Int("level", 10, "the max level of depth to crawl")
-	delay := flag.Int("delay", 1000, "delay between each request in milliseconds")
-	flag.Parse()
-
-	if *hostname == "" {
-		flag.PrintDefaults()
-		return
+// PrettyPrint takes the site map and prints it as json
+func PrettyPrint(site map[string][]string) {
+	type SiteMapItem struct {
+		URL   string   `json:"url"`
+		Links []string `json:"links"`
 	}
 
-	fmt.Printf("Parsing %v with %v milliseconds interval.\n", *hostname, *delay)
-	siteMap, err := Crawl(*hostname, *level, *delay)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(siteMap)
+	fmt.Println("[")
+	first := true
+	for k, v := range site {
+		item := SiteMapItem{URL: k, Links: v}
+		jsonStr, err := json.Marshal(item)
+		if err != nil {
+			log.Printf("Error pretty printing: %v", err)
+			return
+		}
+		if !first {
+			fmt.Print(",")
+		}
+		fmt.Println(string(jsonStr))
+		first = false
 	}
+	fmt.Println("]")
 }
 
 // ParseHTML takes a html body and returns a list of referred URLs
@@ -72,7 +74,7 @@ func FilterByDomain(domain string, urls []string) []string {
 	for _, rawurl := range urls {
 		u, err := url.Parse(rawurl)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing url %v: %v", rawurl, err)
+			log.Printf("Error parsing url %v: %v", rawurl, err)
 			continue
 		}
 		if u.Hostname() == domain {
@@ -100,7 +102,7 @@ func GetBody(rawurl string) (string, error) {
 
 // Crawl takes a base URL and builds a site map from it.
 // delay is the time in miliseconds to wait between one request and another
-func Crawl(rawurl string, level, delay int) (map[string][]string, error) {
+func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, error) {
 	pu, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, err
@@ -132,9 +134,17 @@ func Crawl(rawurl string, level, delay int) (map[string][]string, error) {
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 
 		urls := ParseHTML(body)
-		filtered := FilterByDomain(domain, urls)
+		if verbose {
+			var pad string
+			for i := 0; i <= u.Level; i++ {
+				pad = pad + "-"
+			}
+			pad += ">"
+			log.Println(pad + u.URL)
+		}
 
-		adjList[u.URL] = filtered
+		adjList[u.URL] = urls
+		filtered := FilterByDomain(domain, urls)
 
 		if u.Level < level {
 			for _, f := range filtered {
