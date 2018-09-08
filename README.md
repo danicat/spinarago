@@ -35,7 +35,7 @@ $ spinarago --hostname http://example.com | jq
 You can also redirect the stdout to a json file to make a site map dump:
 
 ```sh
-$ ./spinarago --hostname http://example.com -level 1 -delay 10 > example_level1.json
+$ spinarago --hostname http://example.com -level 1 -delay 10 > example_level1.json
 ```
 
 `jq` is really handy to filter the output:
