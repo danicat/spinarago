@@ -4,7 +4,7 @@ A basic web crawler written in Go.
 
 ## Why "Spinarago"?
 
-Spinarak = A spider pokemón  
+Spinarak = A spider Pokémon  
 Go = Go
 
 You do the math. :)
