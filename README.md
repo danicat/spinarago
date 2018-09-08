@@ -19,6 +19,7 @@ spinarago --hostname <host> --delay <milliseconds> --level <max-depth>
 
 - Handle relative paths
 - Handle paths without ports
-- Print results as they came through
+- Print results as they come through
 - Improve error handling
 - Improve output
+- Refactor tests

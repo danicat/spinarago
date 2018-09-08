@@ -22,6 +22,11 @@ func main() {
 	delay := flag.Int("delay", 1000, "delay between each request in milliseconds")
 	flag.Parse()
 
+	if *hostname == "" {
+		flag.PrintDefaults()
+		return
+	}
+
 	fmt.Printf("Parsing %v with %v milliseconds interval.\n", *hostname, *delay)
 	siteMap, err := Crawl(*hostname, *level, *delay)
 	if err != nil {
@@ -121,8 +126,8 @@ func Crawl(rawurl string, level, delay int) (map[string][]string, error) {
 
 		body, err := GetBody(u.URL)
 		if err != nil {
-			// return nil, err
 			log.Printf("Error getting URL %v: %v\n", u.URL, err)
+			continue
 		}
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 
