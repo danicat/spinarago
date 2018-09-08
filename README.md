@@ -47,7 +47,6 @@ $ cat example_level1.json | jq '.[] | { url: .url }'
 ## TODO
 
 - Handle relative paths
-- Refactor tests
 
 ## Contributing
 

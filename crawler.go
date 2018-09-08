@@ -13,14 +13,14 @@ import (
 	"golang.org/x/net/html"
 )
 
-// PrettyPrint takes the site map and prints it as json
+// PrettyPrint takes a site map and prints it as json
 func PrettyPrint(site map[string][]string) {
 	type SiteMapItem struct {
 		URL   string   `json:"url"`
 		Links []string `json:"links"`
 	}
 
-	fmt.Println("[")
+	fmt.Print("[")
 	first := true
 	for k, v := range site {
 		item := SiteMapItem{URL: k, Links: v}
@@ -32,10 +32,10 @@ func PrettyPrint(site map[string][]string) {
 		if !first {
 			fmt.Print(",")
 		}
-		fmt.Println(string(jsonStr))
+		fmt.Print(string(jsonStr))
 		first = false
 	}
-	fmt.Println("]")
+	fmt.Print("]")
 }
 
 // ParseHTML takes a html body and returns a list of referred URLs

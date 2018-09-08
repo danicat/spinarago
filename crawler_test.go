@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -71,9 +72,55 @@ var def = `
 <title>DEF</title>
 <body>
 <p><a href="http://localhost:8080/abc.html">abc</a></p>
+<p><a href="http://localhost:8080/ghi.html">ghi</a></p>
 </body>
 </html>
 `
+
+var ghi = `
+<html>
+<title>GHI</title>
+<body>
+<p><a href="http://localhost:8080/jkl.html">jkl</a></p>
+</body>
+</html>
+`
+
+var jkl = `
+<html>
+<title>JKL</title>
+</html>
+`
+
+func Example() {
+	os.Args = []string{"spinarago", "-hostname", "http://example.com"}
+	main()
+	// output:
+	// [{"url":"http://example.com","links":["http://www.iana.org/domains/example"]}]
+}
+
+func TestMain(m *testing.M) {
+	// Setup Test web server on localhost:8080
+	hndlFunc := func(path, body string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != path {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			io.WriteString(w, body)
+		}
+	}
+
+	http.HandleFunc("/", hndlFunc("/", home))
+	http.HandleFunc("/abc.html", hndlFunc("/abc.html", abc))
+	http.HandleFunc("/def.html", hndlFunc("/def.html", def))
+	http.HandleFunc("/ghi.html", hndlFunc("/ghi.html", ghi))
+	http.HandleFunc("/jkl.html", hndlFunc("/jkl.html", jkl))
+
+	go http.ListenAndServe(":8080", nil)
+	os.Exit(m.Run())
+}
 
 func TestParseHTML(t *testing.T) {
 	table := []struct {
@@ -153,39 +200,22 @@ func TestCrawl(t *testing.T) {
 	expected := map[string][]string{
 		"http://localhost:8080": {
 			"http://localhost:8080/abc.html",
-			// "http://localhost:8080/def.html",
-			// "http://localhost:8080/ghi.html",
 		},
 		"http://localhost:8080/abc.html": {
 			"http://localhost:8080/def.html",
 		},
+		// Test for cycles (should not visit abc again)
 		"http://localhost:8080/def.html": {
 			"http://localhost:8080/abc.html",
-			// "http://localhost:8080/ghi.html",
-			// "http://localhost:8080/jkl.html",
+			"http://localhost:8080/ghi.html",
 		},
-		// "http://localhost:8080/ghi.html": {
-		// },
+		// Test for level (at level = 3, jkl should not appear as a key)
+		"http://localhost:8080/ghi.html": {
+			"http://localhost:8080/jkl.html",
+		},
 	}
 
-	hndlFunc := func(path, body string) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != path {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			io.WriteString(w, body)
-		}
-	}
-
-	http.HandleFunc("/", hndlFunc("/", home))
-	http.HandleFunc("/abc.html", hndlFunc("/abc.html", abc))
-	http.HandleFunc("/def.html", hndlFunc("/def.html", def))
-
-	go http.ListenAndServe(":8080", nil)
-
-	result, err := Crawl(input, 10, 1000, false)
+	result, err := Crawl(input, 3, 10, false)
 	if err != nil {
 		t.Fatalf("Test failed with error: %v", err)
 	}
