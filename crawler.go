@@ -14,7 +14,7 @@ import (
 )
 
 // PrettyPrint takes a site map and prints it as json
-func PrettyPrint(site map[string][]string) {
+func PrettyPrint(site map[string][]*url.URL) {
 	type SiteMapItem struct {
 		URL   string   `json:"url"`
 		Links []string `json:"links"`
@@ -23,7 +23,12 @@ func PrettyPrint(site map[string][]string) {
 	fmt.Print("[")
 	first := true
 	for k, v := range site {
-		item := SiteMapItem{URL: k, Links: v}
+		links := []string{}
+		for _, u := range v {
+			links = append(links, u.String())
+		}
+
+		item := SiteMapItem{URL: k, Links: links}
 		jsonStr, err := json.Marshal(item)
 		if err != nil {
 			log.Printf("Error pretty printing: %v", err)
@@ -39,11 +44,11 @@ func PrettyPrint(site map[string][]string) {
 }
 
 // ParseHTML takes a html body and returns a list of referred URLs
-func ParseHTML(body string) []string {
+func ParseHTML(body string) []*url.URL {
 	r := strings.NewReader(body)
 	tokenizer := html.NewTokenizer(r)
 
-	result := []string{}
+	result := []*url.URL{}
 
 	for {
 		tt := tokenizer.Next()
@@ -56,7 +61,12 @@ func ParseHTML(body string) []string {
 			if t.Data == "a" {
 				for _, attr := range t.Attr {
 					if attr.Key == "href" {
-						result = append(result, attr.Val)
+						u, err := url.Parse(attr.Val)
+						if err != nil {
+							log.Printf("Error parsing url %v: %v", attr.Val, err)
+							continue
+						}
+						result = append(result, u)
 					}
 				}
 			}
@@ -68,15 +78,11 @@ func ParseHTML(body string) []string {
 
 // FilterByHostname takes a list of URLs and remove the ones that doesn't belong
 // to the given hostname
-func FilterByHostname(hostname string, urls []string) []string {
-	result := []string{}
+func FilterByHostname(hostname string, urls []*url.URL) []*url.URL {
+	result := []*url.URL{}
 
-	for _, rawurl := range urls {
-		u, err := url.Parse(rawurl)
-		if err != nil {
-			log.Printf("Error parsing url %v: %v", rawurl, err)
-			continue
-		}
+	for _, u := range urls {
+		// TODO: handle relative paths
 		target := u.Hostname()
 		if len(target) < len(hostname) {
 			continue
@@ -90,7 +96,7 @@ func FilterByHostname(hostname string, urls []string) []string {
 			}
 		}
 		if match {
-			result = append(result, rawurl)
+			result = append(result, u)
 		}
 	}
 
@@ -114,33 +120,35 @@ func GetBody(rawurl string) (string, error) {
 
 // Crawl takes a base URL and builds a site map from it.
 // delay is the time in miliseconds to wait between one request and another
-func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, error) {
-	pu, err := url.Parse(rawurl)
+func Crawl(baseURL string, level, delay int, verbose bool) (map[string][]*url.URL, error) {
+	bu, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	hostname := pu.Hostname()
+	hostname := bu.Hostname()
 
 	type Item struct {
-		URL   string
+		URL   *url.URL
 		Level int
 	}
-	queue := []Item{Item{rawurl, 0}}
+	queue := []Item{Item{bu, 0}}
 
-	adjList := map[string][]string{}
+	adjList := map[string][]*url.URL{}
 
 	for len(queue) > 0 {
 		u := queue[0]
 		queue = queue[1:]
 
-		if _, ok := adjList[u.URL]; ok {
+		currURL := u.URL.String()
+
+		if _, ok := adjList[currURL]; ok {
 			continue
 		}
 
-		body, err := GetBody(u.URL)
+		body, err := GetBody(currURL)
 		if err != nil {
-			log.Printf("Error getting URL %v: %v\n", u.URL, err)
+			log.Printf("Error getting URL %v: %v\n", currURL, err)
 			continue
 		}
 		time.Sleep(time.Duration(delay) * time.Millisecond)
@@ -152,10 +160,10 @@ func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, 
 				pad = pad + "-"
 			}
 			pad += ">"
-			log.Println(pad + u.URL)
+			log.Println(pad + currURL)
 		}
 
-		adjList[u.URL] = urls
+		adjList[currURL] = urls
 		filtered := FilterByHostname(hostname, urls)
 
 		if u.Level < level {

@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 )
@@ -163,19 +164,23 @@ func TestParseHTML(t *testing.T) {
 		}
 
 		for i, r := range result {
-			if r != test.expected[i] {
+			if r.String() != test.expected[i] {
 				t.Fatalf("\nTest: %v\nExpected %v\nGot %v\n", testnum, test.expected, result)
 			}
 		}
 	}
 }
 
+func NewURL(u string) *url.URL {
+	url, _ := url.Parse(u)
+	return url
+}
 func TestFilterByHostname(t *testing.T) {
-	input := []string{
-		"//abc.com/index.html",
-		"//xyz.abc.com/blablabla.html",
-		"//def.com/index.html",
-		"",
+	input := []*url.URL{
+		NewURL("//abc.com/index.html"),
+		NewURL("//xyz.abc.com/blablabla.html"),
+		NewURL("//def.com/index.html"),
+		NewURL(""),
 	}
 	domain := "abc.com"
 	expected := []string{
@@ -189,7 +194,7 @@ func TestFilterByHostname(t *testing.T) {
 	}
 
 	for i, r := range result {
-		if r != expected[i] {
+		if r.String() != expected[i] {
 			t.Fatalf("\nExpected %v\nGot %v\n", expected, result)
 		}
 	}
@@ -229,7 +234,7 @@ func TestCrawl(t *testing.T) {
 			t.Fatalf("\nExpected: %v\nGot: %v\n", expected, result)
 		} else {
 			for i, u := range v {
-				if u != ev[i] {
+				if u.String() != ev[i] {
 					t.Fatalf("\nExpected: %v\nGot: %v\n", expected, result)
 				}
 			}
