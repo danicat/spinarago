@@ -173,14 +173,14 @@ func TestParseHTML(t *testing.T) {
 func TestFilterByHostname(t *testing.T) {
 	input := []string{
 		"//abc.com/index.html",
-		"//abc.com/blablabla.html",
+		"//xyz.abc.com/blablabla.html",
 		"//def.com/index.html",
 		"",
 	}
 	domain := "abc.com"
 	expected := []string{
 		"//abc.com/index.html",
-		"//abc.com/blablabla.html",
+		"//xyz.abc.com/blablabla.html",
 	}
 
 	result := FilterByHostname(domain, input)

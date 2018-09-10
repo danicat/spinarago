@@ -77,8 +77,19 @@ func FilterByHostname(hostname string, urls []string) []string {
 			log.Printf("Error parsing url %v: %v", rawurl, err)
 			continue
 		}
-		log.Println("Hostname: " + u.Hostname())
-		if u.Hostname() == hostname {
+		target := u.Hostname()
+		if len(target) < len(hostname) {
+			continue
+		}
+
+		match := true
+		for i, j := len(hostname)-1, len(target)-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+			if hostname[i] != target[j] {
+				match = false
+				break
+			}
+		}
+		if match {
 			result = append(result, rawurl)
 		}
 	}
@@ -109,7 +120,7 @@ func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, 
 		return nil, err
 	}
 
-	domain := pu.Hostname()
+	hostname := pu.Hostname()
 
 	type Item struct {
 		URL   string
@@ -145,7 +156,7 @@ func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, 
 		}
 
 		adjList[u.URL] = urls
-		filtered := FilterByHostname(domain, urls)
+		filtered := FilterByHostname(hostname, urls)
 
 		if u.Level < level {
 			for _, f := range filtered {
