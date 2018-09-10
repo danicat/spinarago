@@ -66,9 +66,9 @@ func ParseHTML(body string) []string {
 	return result
 }
 
-// FilterByDomain takes a list of URLs and remove the ones that doesn't belong
-// to the given domain
-func FilterByDomain(domain string, urls []string) []string {
+// FilterByHostname takes a list of URLs and remove the ones that doesn't belong
+// to the given hostname
+func FilterByHostname(hostname string, urls []string) []string {
 	result := []string{}
 
 	for _, rawurl := range urls {
@@ -77,7 +77,8 @@ func FilterByDomain(domain string, urls []string) []string {
 			log.Printf("Error parsing url %v: %v", rawurl, err)
 			continue
 		}
-		if u.Hostname() == domain {
+		log.Println("Hostname: " + u.Hostname())
+		if u.Hostname() == hostname {
 			result = append(result, rawurl)
 		}
 	}
@@ -144,7 +145,7 @@ func Crawl(rawurl string, level, delay int, verbose bool) (map[string][]string, 
 		}
 
 		adjList[u.URL] = urls
-		filtered := FilterByDomain(domain, urls)
+		filtered := FilterByHostname(domain, urls)
 
 		if u.Level < level {
 			for _, f := range filtered {

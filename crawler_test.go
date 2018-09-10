@@ -170,7 +170,7 @@ func TestParseHTML(t *testing.T) {
 	}
 }
 
-func TestFilterByDomain(t *testing.T) {
+func TestFilterByHostname(t *testing.T) {
 	input := []string{
 		"//abc.com/index.html",
 		"//abc.com/blablabla.html",
@@ -183,7 +183,7 @@ func TestFilterByDomain(t *testing.T) {
 		"//abc.com/blablabla.html",
 	}
 
-	result := FilterByDomain(domain, input)
+	result := FilterByHostname(domain, input)
 	if len(result) != len(expected) {
 		t.Fatalf("\nExpected %v\nGot %v\n", expected, result)
 	}
